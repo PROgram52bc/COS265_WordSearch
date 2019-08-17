@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Random;
 
 public class PuzzleGenerator {
     final char nullChar = '@';
@@ -10,9 +11,11 @@ public class PuzzleGenerator {
     private char[][] puzzle;
     private char[][] answer;
     private ArrayList<Pos> schemes;
-    public PuzzleGenerator(int h, int w, String[] words) throws Exception {
+	private Random random;
+    private void initialize(int h, int w, String[] words, float difficulty) throws Exception {
         this.height = h;
         this.width = w;
+		this.random = new Random();
         // format: puzzle[row][col]
         this.puzzle = new char[height][width];
         this.answer = new char[height][width];
@@ -33,12 +36,18 @@ public class PuzzleGenerator {
         schemes.add(new HorizontalPos(0,0));
         schemes.add(new VerticalPos(0,0));
         schemes.add(new LeftBottomRightTopPos(0,0));
-        schemes.add(new LeftTopRightBottom(0,0));
+        schemes.add(new LeftTopRightBottomPos(0,0));
 
         // schemes.add(new ....Pos(0,0));
 
         generatePuzzle();
     }
+	public PuzzleGenerator(int h, int w, String[] words, float difficulty) throws Exception {
+		initialize(h, w, words, difficulty);
+	}
+	public PuzzleGenerator(int h, int w, String[] words) throws Exception {
+		initialize(h, w, words, 0);
+	}
     private void generatePuzzle() {
         for (String word : words) {
             fillWord(word);
@@ -55,7 +64,7 @@ public class PuzzleGenerator {
                     // check repeatedly until correct letter is found
                     while (true)
                     {
-                        char charToFillIn = getRandomLetter(1);
+                        char charToFillIn = getRandomLetter(0);
                         Iterator schemeIt = schemes.iterator();
                         Pos currentScheme = null;
                         boolean valid = true; // assume letter is valid
@@ -65,7 +74,7 @@ public class PuzzleGenerator {
                             if (charValidAt(charToFillIn, currentScheme)) continue; // continue checking if valid
                             else {
                                 valid = false;
-                                StdOut.println(String.format("Letter %c failed at (%d, %d) for scheme %s, changing to another letter..", charToFillIn, row, col, currentScheme.getClass().getName()));
+                                System.out.println(String.format("Letter %c failed at (%d, %d) for scheme %s, changing to another letter..", charToFillIn, row, col, currentScheme.getClass().getName()));
                                 break;
                             }
                         }
@@ -115,7 +124,7 @@ public class PuzzleGenerator {
             rangeStringBuilder.setCharAt(posToFill.getIndexInString(), charToFill);
             String rangeString = rangeStringBuilder.substring(startIndex, endIndex);
             // test
-            // StdOut.println(String.format("For queryWord '%s' and \nfullString '%s' \nrangeString is '%s'", queryWord, fullString, rangeString));
+            // System.out.println(String.format("For queryWord '%s' and \nfullString '%s' \nrangeString is '%s'", queryWord, fullString, rangeString));
             if (rangeString.contains(queryWord)) return false;
         }
         return true;
@@ -126,14 +135,14 @@ public class PuzzleGenerator {
     // 1 means always return letters from the set of words
     // 0 means get random letter
     private char getRandomLetter(double heuristic) {
-        double cutOff = StdRandom.uniform();
+        double cutOff = random.nextInt();
         if (cutOff < heuristic) {
             // return a character present in the current words
-            String luckyWord = words[StdRandom.uniform(words.length)];
-            char luckyChar = luckyWord.charAt(StdRandom.uniform(luckyWord.length()));
+            String luckyWord = words[random.nextInt(words.length)];
+            char luckyChar = luckyWord.charAt(random.nextInt(luckyWord.length()));
             return luckyChar;
         }
-        else return (char) ('A' + StdRandom.uniform('Z'-'A'+1));
+        else return (char) ('A' + random.nextInt('Z'-'A'+1));
     }
 
     // fill the given word in the puzzle, if cannot find a space, throw an error.
@@ -163,7 +172,7 @@ public class PuzzleGenerator {
             else break;
         } while (true);
         // get a random one and fill it.
-        Pos currentPos = possibleStarts.get(StdRandom.uniform(possibleStarts.size()));
+        Pos currentPos = possibleStarts.get(random.nextInt(possibleStarts.size()));
         int currentIndex = 0;
         while (currentIndex < word.length()) // for every index in the word
         {
@@ -296,28 +305,28 @@ public class PuzzleGenerator {
         }
         @Override
         public Pos next() {
-            if (row == 0 || col == height-1) return null;
+            if (row == 0 || col == width-1) return null;
             return new LeftBottomRightTopPos(row-1, col+1);
         }
     }
     // LeftTopRightBottom scheme of word layout
-    private class LeftTopRightBottom extends Pos {
-        public LeftTopRightBottom(int r, int c) {
+    private class LeftTopRightBottomPos extends Pos {
+        public LeftTopRightBottomPos(int r, int c) {
             super(r, c);
         }
         @Override
         public Pos getCopy() {
-            return new LeftTopRightBottom(row, col);
+            return new LeftTopRightBottomPos(row, col);
         }
         @Override
         public Pos prev() {
             if (col == 0 || row == 0) return null;
-            return new LeftTopRightBottom(row-1, col-1);
+            return new LeftTopRightBottomPos(row-1, col-1);
         }
         @Override
         public Pos next() {
-            if (col == height-1 || row == height-1) return null;
-            return new LeftTopRightBottom(row+1, col+1);
+            if (col == width-1 || row == height-1) return null;
+            return new LeftTopRightBottomPos(row+1, col+1);
         }
     }
     // define more schemes here! e.g. reversedHorizontal, spinningOutward...
@@ -348,15 +357,15 @@ public class PuzzleGenerator {
         }
     }
 
-
     public static void main (String[] args) throws Exception {
-        PuzzleGenerator pg = new PuzzleGenerator(100,100,new String[]{
+		float difficulty = 0.5f; // between 0 and 1
+        PuzzleGenerator pg = new PuzzleGenerator(20,10,new String[]{
                 "Merry",
                 "Christmas",
                 "Christ"
-        });
+        }, difficulty);
         pg.printPuzzle();
-        StdOut.println();
+        System.out.println();
         pg.printAnswer();
     }
 }
